@@ -552,7 +552,9 @@ function unlocked(topic) {
 }
 
 function effectiveStatus(topic) {
-  return unlocked(topic) ? st(topic.id).status : "locked";
+  if (!unlocked(topic)) return "locked";
+  const s = st(topic.id).status;
+  return s === "locked" ? "active" : s;
 }
 
 // ── Header ────────────────────────────────────────────────────────────────
