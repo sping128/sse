@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson — Senior Engineer Quest</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #080b14;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Top bar ──────────────────────────────────────── */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 56px;
+  background: #0a0d18;
+  border-bottom: 1px solid #1a2240;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.5rem;
+  z-index: 100;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #1a2240;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.back-btn:hover { color: #94a3b8; border-color: #2d3a55; }
+
+.topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  flex: 1;
+  min-width: 0;
+}
+.topbar-title .icon { font-size: 1.2rem; }
+.topbar-title .text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-xp {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.xp-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f59e0b;
+  background: #1c1500;
+  border: 1px solid #451a00;
+  border-radius: 20px;
+  padding: 0.2rem 0.65rem;
+}
+
+.quiz-btn {
+  padding: 0.4rem 1rem;
+  background: #5b21b6;
+  color: #ede9fe;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.quiz-btn:hover { background: #6d28d9; box-shadow: 0 0 12px rgba(109,40,217,0.4); }
+
+/* ── Layout ───────────────────────────────────────── */
+.layout {
+  display: flex;
+  margin-top: 56px;
+  min-height: calc(100vh - 56px);
+}
+
+/* ── TOC sidebar ──────────────────────────────────── */
+.toc {
+  width: 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  overflow-y: auto;
+  padding: 1.75rem 1rem 1.75rem 1.5rem;
+  border-right: 1px solid #1a2240;
+  background: #080b14;
+}
+
+.toc::-webkit-scrollbar { width: 3px; }
+.toc::-webkit-scrollbar-thumb { background: #1a2240; }
+
+.toc-heading {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #374151;
+  font-weight: 700;
+  margin-bottom: 0.85rem;
+}
+
+.toc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+  border-left: 2px solid transparent;
+}
+
+.toc-item:hover { background: #0d1120; }
+
+.toc-item.active {
+  background: #0f0a24;
+  border-left-color: #7c3aed;
+}
+
+.toc-num {
+  font-size: 0.65rem;
+  color: #374151;
+  font-weight: 700;
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 16px;
+}
+.toc-item.active .toc-num { color: #7c3aed; }
+
+.toc-text {
+  font-size: 0.78rem;
+  color: #4b5563;
+  line-height: 1.35;
+}
+.toc-item.active .toc-text { color: #a78bfa; }
+.toc-item:hover .toc-text { color: #64748b; }
+
+/* Progress dots */
+.toc-progress {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #1a2240;
+}
+
+.progress-bar-wrap { margin-top: 0.5rem; }
+.progress-bar-label { font-size: 0.68rem; color: #374151; margin-bottom: 5px; display: flex; justify-content: space-between; }
+.progress-bar { height: 4px; background: #1a2240; border-radius: 2px; }
+.progress-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #7c3aed, #a78bfa); transition: width 0.4s; }
+
+/* ── Main content ─────────────────────────────────── */
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 2.5rem 3rem 4rem;
+  max-width: 780px;
+}
+
+/* Section */
+.section-block {
+  margin-bottom: 4rem;
+  scroll-margin-top: 76px;
+}
+
+.section-block h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #1a2240;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #7c3aed;
+  background: #1a0f40;
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+}
+
+/* Prose */
+.section-content p {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+}
+
+.section-content strong { color: #cbd5e1; }
+.section-content em    { color: #a78bfa; font-style: normal; }
+
+.section-content ul, .section-content ol {
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.section-content li {
+  font-size: 0.93rem;
+  line-height: 1.75;
+  color: #94a3b8;
+  margin-bottom: 0.3rem;
+}
+
+.section-content h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin: 1.5rem 0 0.75rem;
+}
+
+/* Blockquote */
+.section-content blockquote {
+  border-left: 3px solid #7c3aed;
+  padding: 0.75rem 1.25rem;
+  margin: 1.25rem 0;
+  background: #0d0820;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+  color: #a78bfa;
+  font-style: italic;
+}
+
+/* Callout */
+.callout {
+  background: #0d1020;
+  border: 1px solid #1e2a50;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+  font-size: 0.9rem;
+  color: #94a3b8;
+  line-height: 1.65;
+}
+.callout strong { color: #e2e8f0; }
+.callout-info    { border-color: #1e3a5f; background: #071520; }
+.callout-info strong { color: #38bdf8; }
+.callout-warning { border-color: #3d2900; background: #110d00; }
+.callout-warning strong { color: #f59e0b; }
+
+/* Code blocks */
+pre {
+  background: #060810;
+  border: 1px solid #1a2240;
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+
+pre code {
+  color: #a9b1d6;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Inline code */
+code {
+  background: #0d1020;
+  border: 1px solid #1a2240;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  color: #7dd3fc;
+}
+
+pre code { border: none; }
+
+/* Syntax highlight hints */
+.java .keyword  { color: #bb9af7; }
+.java .comment  { color: #565f89; }
+.java .string   { color: #9ece6a; }
+.java .anno     { color: #e0af68; }
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.86rem;
+}
+th {
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  background: #0d1120;
+  color: #64748b;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid #1a2240;
+}
+td {
+  padding: 0.65rem 0.85rem;
+  color: #94a3b8;
+  border-bottom: 1px solid #0f1520;
+  vertical-align: top;
+  line-height: 1.55;
+}
+td strong { color: #cbd5e1; }
+tr:hover td { background: #0a0d18; }
+
+/* Coming soon */
+.coming-soon {
+  color: #374151;
+  font-size: 0.9rem;
+  padding: 3rem;
+  text-align: center;
+}
+.coming-soon strong { color: #4b5563; }
+
+/* ── Quiz CTA at bottom ───────────────────────────── */
+.quiz-cta {
+  margin-top: 1rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0f0a24, #0d1120);
+  border: 1px solid #2d1a6b;
+  border-radius: 12px;
+  text-align: center;
+}
+.quiz-cta h3 { font-size: 1.1rem; color: #e2e8f0; margin-bottom: 0.5rem; }
+.quiz-cta p  { font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem; line-height: 1.6; }
+.quiz-cta .cta-btn {
+  display: inline-block;
+  padding: 0.65rem 1.75rem;
+  background: #5b21b6;
+  color: #ede9fe;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.quiz-cta .cta-btn:hover { background: #6d28d9; box-shadow: 0 0 16px rgba(109,40,217,0.4); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back-btn" href="index.html">← Map</a>
+  <div class="topbar-title">
+    <span class="icon" id="topIcon">📖</span>
+    <span class="text" id="topTitle">Lesson</span>
+  </div>
+  <div class="topbar-xp">
+    <div class="xp-pill" id="xpPill">0 / 0 XP</div>
+    <button class="quiz-btn" onclick="goQuiz()">⚔ Quiz me in chat</button>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" id="toc">
+    <div class="toc-heading">Contents</div>
+    <div id="tocList"></div>
+    <div class="toc-progress">
+      <div class="toc-heading">Topic Progress</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-label">
+          <span id="progressLabel">0 XP earned</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="content" id="content"></main>
+</div>
+
+<script src="progress.js"></script>
+<script src="lessons.js"></script>
+<script>
+// ── Init ──────────────────────────────────────────────────────────────────
+
+const params  = new URLSearchParams(window.location.search);
+const topicId = params.get("topic") || "architecture";
+const lesson  = window.LESSONS?.[topicId];
+const state   = window.PROGRESS?.topics?.[topicId] || { xp_earned: 0 };
+
+if (!lesson) {
+  document.body.innerHTML = `<div style="padding:2rem;color:#ef4444">Lesson not found for topic: ${topicId}</div>`;
+  throw new Error("Lesson not found");
+}
+
+// ── Header ────────────────────────────────────────────────────────────────
+
+document.title = `${lesson.title} — Senior Engineer Quest`;
+document.getElementById("topIcon").textContent  = lesson.icon;
+document.getElementById("topTitle").textContent = lesson.title;
+
+const earned = state.xp_earned || 0;
+const pct    = Math.min(100, Math.round((earned / lesson.xpMax) * 100));
+document.getElementById("xpPill").textContent     = `${earned} / ${lesson.xpMax} XP`;
+document.getElementById("progressLabel").textContent = `${earned} XP earned`;
+document.getElementById("progressPct").textContent   = pct + "%";
+document.getElementById("progressFill").style.width  = pct + "%";
+
+// ── Build content ─────────────────────────────────────────────────────────
+
+const content = document.getElementById("content");
+const tocList = document.getElementById("tocList");
+
+lesson.sections.forEach((sec, i) => {
+  // TOC item
+  const tocItem = document.createElement("div");
+  tocItem.className = "toc-item";
+  tocItem.dataset.target = sec.id;
+  tocItem.innerHTML = `<span class="toc-num">${i + 1}</span><span class="toc-text">${sec.title}</span>`;
+  tocItem.addEventListener("click", () => {
+    document.getElementById(sec.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  tocList.appendChild(tocItem);
+
+  // Section block
+  const block = document.createElement("section");
+  block.className = "section-block";
+  block.id = sec.id;
+  block.innerHTML = `
+    <h2><span class="section-num">${String(i + 1).padStart(2, "0")}</span>${sec.title}</h2>
+    <div class="section-content">${sec.content}</div>`;
+  content.appendChild(block);
+});
+
+// Quiz CTA at bottom
+const cta = document.createElement("div");
+cta.className = "quiz-cta";
+cta.innerHTML = `
+  <h3>Ready to test yourself?</h3>
+  <p>Come back to the chat and type <strong>"quiz me on ${lesson.title}"</strong> — I'll grill you on everything in this lesson.</p>
+  <button class="cta-btn" onclick="goQuiz()">⚔ Go to quiz</button>`;
+content.appendChild(cta);
+
+// ── TOC active tracking (IntersectionObserver) ────────────────────────────
+
+const tocItems = Array.from(tocList.querySelectorAll(".toc-item"));
+const sections = Array.from(content.querySelectorAll(".section-block"));
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      tocItems.forEach(item => item.classList.remove("active"));
+      const active = tocItems.find(item => item.dataset.target === entry.target.id);
+      active?.classList.add("active");
+    }
+  });
+}, { rootMargin: "-56px 0px -60% 0px", threshold: 0 });
+
+sections.forEach(s => observer.observe(s));
+
+// ── Quiz action ───────────────────────────────────────────────────────────
+
+function goQuiz() {
+  alert(`📋 Go to Claude and type:\n\n"quiz me on ${lesson.title}"\n\nI'll pick up from where you left off.`);
+}
+</script>
+</body>
+</html>

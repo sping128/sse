@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Senior Engineer Quest</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #080b14;
+  color: #e2e8f0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  background: #0d1120;
+  border-bottom: 1px solid #1a2240;
+  padding: 0.85rem 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  height: 64px;
+}
+
+.logo {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #a78bfa, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+.divider { width: 1px; height: 28px; background: #1a2240; }
+
+.player-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.tier-badge {
+  padding: 0.2rem 0.65rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.tier-junior  { background: #431407; color: #fb923c; border: 1px solid #7c2d12; }
+.tier-mid     { background: #1c2532; color: #94a3b8; border: 1px solid #2d3a55; }
+.tier-senior  { background: #3b2800; color: #fbbf24; border: 1px solid #92400e; }
+.tier-staff   { background: #1e1040; color: #c4b5fd; border: 1px solid #5b21b6; box-shadow: 0 0 10px rgba(139,92,246,0.3); }
+
+.xp-wrap { flex: 1; min-width: 0; max-width: 360px; }
+.xp-meta { display: flex; justify-content: space-between; font-size: 0.7rem; color: #64748b; margin-bottom: 5px; }
+.xp-meta span:first-child { color: #94a3b8; font-weight: 600; }
+.xp-bar  { height: 6px; background: #1a2240; border-radius: 3px; overflow: hidden; }
+.xp-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6d28d9, #a78bfa);
+  transition: width 0.6s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 8px rgba(167,139,250,0.5);
+}
+
+.streak { font-size: 0.85rem; color: #fb923c; white-space: nowrap; font-weight: 600; }
+
+/* ── Layout ──────────────────────────────────────── */
+.layout {
+  display: flex;
+  height: calc(100vh - 64px);
+}
+
+/* ── Skill tree ─────────────────────────────────── */
+.tree-wrap {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.tree-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tree-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Nodes */
+.node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+  z-index: 5;
+}
+
+.node-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 1.75rem;
+}
+
+.node-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
+  max-width: 100px;
+  line-height: 1.25;
+  pointer-events: none;
+  letter-spacing: 0.01em;
+}
+
+/* State: locked */
+.node.locked .node-ring {
+  background: #0e1220;
+  border-color: #1a2240;
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.node.locked .node-label { color: #374151; }
+
+/* State: active */
+.node.active .node-ring {
+  background: #130e30;
+  border-color: #7c3aed;
+  box-shadow: 0 0 24px rgba(124,58,237,0.45), inset 0 0 12px rgba(124,58,237,0.15);
+  cursor: pointer;
+}
+.node.active .node-label { color: #a78bfa; }
+.node.active .node-ring::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid rgba(124,58,237,0.3);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+
+/* State: completed */
+.node.completed .node-ring {
+  background: #031a0f;
+  border-color: #10b981;
+  box-shadow: 0 0 18px rgba(16,185,129,0.3);
+  cursor: pointer;
+}
+.node.completed .node-label { color: #34d399; }
+
+/* State: skipped */
+.node.skipped .node-ring {
+  background: #141210;
+  border-color: #44403c;
+  opacity: 0.65;
+  cursor: pointer;
+}
+.node.skipped .node-label { color: #78716c; }
+
+.node:not(.locked):hover .node-ring { transform: scale(1.1); }
+
+.node-status-icon {
+  position: absolute;
+  top: -4px; right: -4px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.15; transform: scale(1.15); }
+}
+
+/* ── Side panel ─────────────────────────────────── */
+.side-panel {
+  width: 360px;
+  background: #0a0d18;
+  border-left: 1px solid #1a2240;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.side-panel::-webkit-scrollbar { width: 4px; }
+.side-panel::-webkit-scrollbar-track { background: transparent; }
+.side-panel::-webkit-scrollbar-thumb { background: #1a2240; border-radius: 2px; }
+
+/* Welcome state */
+.panel-welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  gap: 0.75rem;
+}
+.panel-welcome h2 { font-size: 1rem; color: #4b5563; font-weight: 500; }
+.panel-welcome p  { font-size: 0.8rem; color: #374151; line-height: 1.6; }
+
+/* Panel content */
+.panel-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+.panel-header { display: flex; flex-direction: column; gap: 6px; }
+
+.panel-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.panel-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: fit-content;
+  letter-spacing: 0.03em;
+}
+.pstatus-locked    { background: #0f1520; color: #374151; border: 1px solid #1a2240; }
+.pstatus-active    { background: #1a0f40; color: #a78bfa; border: 1px solid #3b1fa0; }
+.pstatus-completed { background: #021a0e; color: #34d399; border: 1px solid #065f46; }
+.pstatus-skipped   { background: #15100e; color: #78716c; border: 1px solid #292524; }
+
+.panel-desc { font-size: 0.83rem; color: #64748b; line-height: 1.65; }
+
+/* XP card */
+.xp-card {
+  background: #0d1120;
+  border: 1px solid #1a2240;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.xp-earned-val { font-size: 1.4rem; font-weight: 800; color: #f59e0b; }
+.xp-card-label { font-size: 0.68rem; color: #4b5563; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+.xp-avail-val  { font-size: 0.95rem; font-weight: 600; color: #374151; text-align: right; }
+
+/* Subtopics */
+.section-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #374151;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.subtopic {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+.subtopic.done { color: #34d399; }
+.subtopic-dot { flex-shrink: 0; margin-top: 2px; font-size: 0.85rem; }
+
+/* Quiz history */
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #0f1520;
+  font-size: 0.78rem;
+}
+.score-date  { color: #374151; }
+.score-pct.good { color: #10b981; font-weight: 700; }
+.score-pct.ok   { color: #f59e0b; font-weight: 700; }
+.score-pct.poor { color: #ef4444; font-weight: 700; }
+.no-scores { font-size: 0.78rem; color: #1f2937; font-style: italic; }
+
+/* Actions */
+.actions { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.btn {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+.btn-primary { background: #5b21b6; color: #ede9fe; }
+.btn-primary:hover { background: #6d28d9; box-shadow: 0 0 16px rgba(109,40,217,0.4); }
+
+.btn-ghost { background: transparent; color: #64748b; border: 1px solid #1a2240; }
+.btn-ghost:hover { border-color: #2d3a55; color: #94a3b8; }
+
+.btn-skip { background: transparent; color: #44403c; border: 1px solid #1c1917; font-size: 0.75rem; }
+.btn-skip:hover { border-color: #44403c; color: #78716c; }
+
+.locked-msg { font-size: 0.78rem; color: #374151; line-height: 1.5; }
+.locked-msg strong { color: #4b5563; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚔ Senior Engineer Quest</div>
+  <div class="divider"></div>
+  <div class="player-name" id="playerName">Learner</div>
+  <div class="tier-badge tier-junior" id="tierBadge">🥉 Junior</div>
+  <div class="xp-wrap">
+    <div class="xp-meta">
+      <span id="xpCurrent">0 XP</span>
+      <span id="xpNext">500 to Mid-level</span>
+    </div>
+    <div class="xp-bar"><div class="xp-fill" id="xpFill" style="width:0%"></div></div>
+  </div>
+  <div class="streak" id="streakEl">🔥 0 day streak</div>
+</header>
+
+<div class="layout">
+  <div class="tree-wrap" id="treeWrap">
+    <div class="tree-container" id="treeContainer">
+      <svg class="tree-svg" id="treeSvg"></svg>
+    </div>
+  </div>
+
+  <div class="side-panel" id="sidePanel">
+    <div class="panel-welcome">
+      <div style="font-size:2.5rem">🗺️</div>
+      <h2>Pick a topic to begin</h2>
+      <p>Click any unlocked node on the skill tree to see lesson details, quiz history, and actions.</p>
+    </div>
+  </div>
+</div>
+
+<script src="progress.js"></script>
+<script>
+// ── Topic graph ────────────────────────────────────────────────────────────
+
+const TOPICS = [
+  {
+    id: "architecture",
+    title: "Software Architecture",
+    icon: "🏛️",
+    desc: "The foundation of everything. Learn to structure systems, reason about trade-offs, and make decisions that outlast you.",
+    prereqs: [],
+    col: 2, row: 0,
+    xpMax: 300,
+    subs: [
+      "Architectural styles (Monolith, Microservices, SOA, Event-driven, Serverless)",
+      "Quality attributes: scalability, reliability, availability, maintainability",
+      "Design principles: SOLID, DRY, KISS, YAGNI, SoC",
+      "Architectural patterns: Layered, Hexagonal, CQRS, Event Sourcing",
+      "Trade-off analysis & Architecture Decision Records (ADRs)"
+    ]
+  },
+  {
+    id: "system-design",
+    title: "System Design",
+    icon: "⚙️",
+    desc: "Design large-scale systems from scratch — load balancing, caching, queues, and how to think about capacity.",
+    prereqs: ["architecture"],
+    col: 1, row: 1,
+    xpMax: 400,
+    subs: [
+      "Horizontal vs vertical scaling",
+      "Load balancing strategies (round-robin, consistent hashing)",
+      "Caching layers: CDN, application cache, distributed cache (Redis)",
+      "Message queues and async processing (Kafka, SQS)",
+      "Rate limiting, backpressure, and throttling"
+    ]
+  },
+  {
+    id: "design-patterns",
+    title: "Design Patterns",
+    icon: "🧩",
+    desc: "Reusable solutions to recurring design problems. Know when to use them — and when not to.",
+    prereqs: ["architecture"],
+    col: 3, row: 1,
+    xpMax: 350,
+    subs: [
+      "Creational: Factory, Abstract Factory, Builder, Singleton",
+      "Structural: Adapter, Decorator, Proxy, Composite, Facade",
+      "Behavioral: Observer, Strategy, Command, Chain of Responsibility",
+      "Anti-patterns: God object, Anemic domain model, Spaghetti code",
+      "When NOT to use patterns (YAGNI in practice)"
+    ]
+  },
+  {
+    id: "distributed-systems",
+    title: "Distributed Systems",
+    icon: "🌐",
+    desc: "The hard parts: consensus, consistency models, partition tolerance, and what really happens when things fail.",
+    prereqs: ["system-design"],
+    col: 0, row: 2,
+    xpMax: 500,
+    subs: [
+      "CAP theorem and practical implications",
+      "Consistency models: strong, eventual, causal, linearizability",
+      "Distributed consensus: Raft and Paxos explained",
+      "Failure modes: network partitions, split-brain, Byzantine faults",
+      "Saga pattern vs two-phase commit"
+    ]
+  },
+  {
+    id: "databases",
+    title: "Databases & Data Modeling",
+    icon: "🗄️",
+    desc: "SQL, NoSQL, NewSQL. Indexing, transactions, sharding, replication, and choosing the right tool.",
+    prereqs: ["system-design", "design-patterns"],
+    col: 2, row: 2,
+    xpMax: 400,
+    subs: [
+      "Relational vs document vs wide-column vs graph trade-offs",
+      "Indexing strategies: B-tree, LSM tree, covering indexes",
+      "ACID vs BASE — what they actually guarantee",
+      "Sharding strategies and replication topologies",
+      "Data modeling for read vs write heavy workloads"
+    ]
+  },
+  {
+    id: "apis",
+    title: "APIs & Protocols",
+    icon: "🔌",
+    desc: "REST, GraphQL, gRPC, WebSockets. API design principles, versioning, and protocol trade-offs.",
+    prereqs: ["design-patterns"],
+    col: 4, row: 2,
+    xpMax: 300,
+    subs: [
+      "REST constraints and best practices",
+      "GraphQL: strengths, N+1 problem, DataLoader",
+      "gRPC and Protocol Buffers vs JSON",
+      "API versioning strategies (URL, header, content negotiation)",
+      "WebSockets, SSE, and long polling trade-offs"
+    ]
+  },
+  {
+    id: "observability",
+    title: "Observability & Reliability",
+    icon: "📊",
+    desc: "Logs, metrics, traces. SLOs, error budgets, incident response. Build systems you can understand in production.",
+    prereqs: ["distributed-systems", "databases"],
+    col: 1, row: 3,
+    xpMax: 400,
+    subs: [
+      "The three pillars: structured logs, metrics, distributed traces",
+      "SLI / SLO / SLA definitions and error budgets",
+      "Alerting strategy: symptom-based vs cause-based",
+      "On-call rotations and incident management",
+      "Chaos engineering and resilience testing"
+    ]
+  },
+  {
+    id: "security",
+    title: "Security Engineering",
+    icon: "🔐",
+    desc: "AuthN, AuthZ, encryption, and secure-by-design thinking. Think like an attacker, build like a defender.",
+    prereqs: ["apis"],
+    col: 3, row: 3,
+    xpMax: 350,
+    subs: [
+      "AuthN vs AuthZ: OAuth2, JWT, OIDC, SAML",
+      "OWASP Top 10 and how to mitigate each",
+      "Encryption at rest vs in transit; key management",
+      "Secret management (Vault, AWS Secrets Manager)",
+      "Threat modeling with STRIDE"
+    ]
+  },
+  {
+    id: "leadership",
+    title: "Engineering Leadership",
+    icon: "🎯",
+    desc: "The capstone. Technical strategy, effective code review, mentoring, estimation, and cross-team influence.",
+    prereqs: ["observability", "security"],
+    col: 2, row: 4,
+    xpMax: 400,
+    subs: [
+      "Technical strategy: roadmaps, build vs buy, tech debt",
+      "Effective code review (what to look for, what not to nitpick)",
+      "Mentoring: feedback models, growth plans",
+      "Estimation and scope negotiation",
+      "Cross-team influence without authority"
+    ]
+  }
+];
+
+// ── Layout constants ───────────────────────────────────────────────────────
+
+const CELL_W  = 165;
+const CELL_H  = 130;
+const PAD_X   = 90;
+const PAD_Y   = 75;
+const COLS    = 5;
+const ROWS    = 5;
+const W       = PAD_X * 2 + (COLS - 1) * CELL_W; // 810
+const H       = PAD_Y * 2 + (ROWS - 1) * CELL_H; // 670
+
+function cx(col) { return PAD_X + col * CELL_W; }
+function cy(row) { return PAD_Y + row * CELL_H; }
+
+// ── Tier config ────────────────────────────────────────────────────────────
+
+const TIERS = [
+  { name: "Junior",   icon: "🥉", cls: "tier-junior",  min: 0,    max: 499  },
+  { name: "Mid-level",icon: "🥈", cls: "tier-mid",     min: 500,  max: 1499 },
+  { name: "Senior",   icon: "🥇", cls: "tier-senior",  min: 1500, max: 3499 },
+  { name: "Staff",    icon: "💎", cls: "tier-staff",   min: 3500, max: 99999}
+];
+
+function tierOf(xp) {
+  return TIERS.findLast(t => xp >= t.min) || TIERS[0];
+}
+
+// ── State helpers ──────────────────────────────────────────────────────────
+
+function st(id) {
+  return window.PROGRESS.topics[id] || { status: "locked", xp_earned: 0, quiz_scores: [], completed_subtopics: [] };
+}
+
+function unlocked(topic) {
+  return topic.prereqs.length === 0 ||
+    topic.prereqs.every(pid => ["completed","skipped"].includes(st(pid).status));
+}
+
+function effectiveStatus(topic) {
+  return unlocked(topic) ? st(topic.id).status : "locked";
+}
+
+// ── Header ────────────────────────────────────────────────────────────────
+
+function renderHeader() {
+  const { player } = window.PROGRESS;
+  const xp  = player.xp || 0;
+  const tier = tierOf(xp);
+  const next = TIERS[TIERS.indexOf(tier) + 1];
+
+  document.getElementById("playerName").textContent = player.name || "Learner";
+
+  const badge = document.getElementById("tierBadge");
+  badge.textContent = `${tier.icon} ${tier.name}`;
+  badge.className   = `tier-badge ${tier.cls}`;
+
+  const inTier   = xp - tier.min;
+  const tierSpan = (next ? next.min : tier.max + 1) - tier.min;
+  const pct      = Math.min(100, (inTier / tierSpan) * 100);
+
+  document.getElementById("xpFill").style.width   = pct + "%";
+  document.getElementById("xpCurrent").textContent = xp + " XP";
+  document.getElementById("xpNext").textContent    = next
+    ? `${next.min - xp} XP to ${next.name}` : "MAX TIER";
+
+  document.getElementById("streakEl").textContent =
+    `🔥 ${player.streak || 0} day streak`;
+}
+
+// ── Skill tree ────────────────────────────────────────────────────────────
+
+function renderTree() {
+  const container = document.getElementById("treeContainer");
+  const svg       = document.getElementById("treeSvg");
+
+  container.style.width  = W + "px";
+  container.style.height = H + "px";
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("width",  W);
+  svg.setAttribute("height", H);
+
+  // Edges
+  let paths = "";
+  TOPICS.forEach(t => {
+    const x2 = cx(t.col), y2 = cy(t.row);
+    t.prereqs.forEach(pid => {
+      const p  = TOPICS.find(q => q.id === pid);
+      if (!p) return;
+      const x1 = cx(p.col), y1 = cy(p.row);
+      const done = ["completed","skipped"].includes(st(pid).status);
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      paths += `<path d="M${x1},${y1} Q${mx},${my} ${x2},${y2}"
+        fill="none" stroke="${done ? "#2a3a6b" : "#111827"}"
+        stroke-width="${done ? 2 : 1.5}"
+        stroke-dasharray="${done ? "none" : "5 4"}"
+        opacity="${done ? 1 : 0.6}"/>`;
+    });
+  });
+  svg.innerHTML = paths;
+
+  // Remove old nodes
+  container.querySelectorAll(".node").forEach(n => n.remove());
+
+  // Nodes
+  TOPICS.forEach(t => {
+    const status = effectiveStatus(t);
+    const state  = st(t.id);
+
+    const el = document.createElement("div");
+    el.className      = `node ${status}`;
+    el.style.left     = cx(t.col) + "px";
+    el.style.top      = cy(t.row) + "px";
+    el.dataset.id     = t.id;
+
+    let badge = "";
+    if (state.status === "completed") badge = `<div class="node-status-icon">✅</div>`;
+    else if (state.skipped)           badge = `<div class="node-status-icon">⏭</div>`;
+
+    el.innerHTML = `
+      <div class="node-ring">${t.icon}${badge}</div>
+      <div class="node-label">${t.title}</div>`;
+
+    if (status !== "locked") el.addEventListener("click", () => openPanel(t.id));
+    container.appendChild(el);
+  });
+}
+
+// ── Side panel ────────────────────────────────────────────────────────────
+
+function openPanel(topicId) {
+  const topic  = TOPICS.find(t => t.id === topicId);
+  const state  = st(topicId);
+  const status = effectiveStatus(topic);
+  const panel  = document.getElementById("sidePanel");
+
+  const STATUS_CONF = {
+    locked:    { label: "🔒 Locked",       cls: "pstatus-locked"    },
+    active:    { label: "▶ In Progress",   cls: "pstatus-active"    },
+    completed: { label: "✅ Completed",    cls: "pstatus-completed"  },
+    skipped:   { label: "⏭ Skipped",      cls: "pstatus-skipped"   }
+  };
+  const { label: slabel, cls: scls } = STATUS_CONF[status];
+
+  // Subtopics
+  const done = state.completed_subtopics || [];
+  const subsHtml = topic.subs.map((s, i) => `
+    <div class="subtopic${done.includes(i) ? " done" : ""}">
+      <span class="subtopic-dot">${done.includes(i) ? "✓" : "○"}</span>
+      <span>${s}</span>
+    </div>`).join("");
+
+  // Scores
+  const scores = state.quiz_scores || [];
+  const scoresHtml = scores.length === 0
+    ? `<p class="no-scores">No quizzes yet.</p>`
+    : scores.map(s => {
+        const cls = s.pct >= 80 ? "good" : s.pct >= 60 ? "ok" : "poor";
+        return `<div class="score-row">
+          <span class="score-date">${s.date}</span>
+          <span class="score-pct ${cls}">${s.pct}%</span>
+        </div>`;
+      }).join("");
+
+  // Actions
+  let actionsHtml = "";
+  if (status === "locked") {
+    const prereqNames = topic.prereqs.map(pid =>
+      TOPICS.find(t => t.id === pid)?.title).filter(Boolean).join(" & ");
+    actionsHtml = `<p class="locked-msg">Complete <strong>${prereqNames}</strong> first to unlock this topic.</p>`;
+  } else if (status === "active") {
+    actionsHtml = `
+      <button class="btn btn-primary" onclick="chatAction('${topicId}', 'lesson')">📖 Read Lesson</button>
+      <button class="btn btn-skip" onclick="chatAction('${topicId}', 'skip')">⏭ Skip this topic</button>`;
+  } else if (status === "completed") {
+    actionsHtml = `
+      <button class="btn btn-ghost" onclick="chatAction('${topicId}', 'review')">🔄 Review / Retake Quiz</button>`;
+  } else if (status === "skipped") {
+    actionsHtml = `
+      <button class="btn btn-ghost" onclick="chatAction('${topicId}', 'unskip')">↩ Un-skip this topic</button>`;
+  }
+
+  panel.innerHTML = `
+    <div class="panel-body">
+      <div class="panel-header">
+        <div class="panel-icon-title">${topic.icon} ${topic.title}</div>
+        <div class="panel-status ${scls}">${slabel}</div>
+      </div>
+
+      <p class="panel-desc">${topic.desc}</p>
+
+      <div class="xp-card">
+        <div>
+          <div class="xp-card-label">XP Earned</div>
+          <div class="xp-earned-val">${state.xp_earned || 0}</div>
+        </div>
+        <div>
+          <div class="xp-card-label">Available</div>
+          <div class="xp-avail-val">${topic.xpMax}</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Subtopics</div>
+        ${subsHtml}
+      </div>
+
+      <div>
+        <div class="section-title">Quiz History</div>
+        ${scoresHtml}
+      </div>
+
+      <div class="actions">${actionsHtml}</div>
+    </div>`;
+}
+
+function chatAction(topicId, action) {
+  const topic = TOPICS.find(t => t.id === topicId);
+  if (action === "lesson" || action === "review") {
+    window.location.href = `lesson.html?topic=${topicId}`;
+    return;
+  }
+  const msgs = {
+    skip:   `Tell Claude: "skip topic: ${topicId}"`,
+    unskip: `Tell Claude: "unskip topic: ${topicId}"`
+  };
+  alert(`📋 Action\n\n${msgs[action]}`);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+
+(function init() {
+  if (!window.PROGRESS) {
+    document.body.innerHTML =
+      `<div style="padding:2rem;color:#ef4444;font-family:monospace">
+        ⚠ progress.js not found.<br>
+        Make sure progress.js is in the same folder as index.html.
+      </div>`;
+    return;
+  }
+  renderHeader();
+  renderTree();
+})();
+</script>
+</body>
+</html>
