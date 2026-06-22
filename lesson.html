@@ -342,6 +342,59 @@ tr:hover td { background: #0a0d18; }
 }
 .coming-soon strong { color: #4b5563; }
 
+/* ── Wrong Answers review ─────────────────────────── */
+.review-section {
+  margin-top: 1.5rem;
+  padding: 1.75rem 2rem;
+  background: #07100a;
+  border: 1px solid #14311e;
+  border-radius: 12px;
+}
+
+.review-section h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #4ade80;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.review-section .review-sub {
+  font-size: 0.78rem;
+  color: #374151;
+  margin-bottom: 1.25rem;
+}
+
+.wrong-item {
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  background: #060d09;
+  border: 1px solid #0f2518;
+  margin-bottom: 0.6rem;
+}
+
+.wrong-item:last-child { margin-bottom: 0; }
+
+.wrong-q {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  margin-bottom: 0.45rem;
+}
+
+.wrong-a {
+  font-size: 0.82rem;
+  color: #4ade80;
+  line-height: 1.6;
+}
+
+.wrong-a::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+
 /* ── Quiz CTA at bottom ───────────────────────────── */
 .quiz-cta {
   margin-top: 1rem;
@@ -465,6 +518,34 @@ cta.innerHTML = `
   <p>Come back to the chat and type <strong>"quiz me on ${lesson.title}"</strong> — I'll grill you on everything in this lesson.</p>
   <button class="cta-btn" onclick="goQuiz()">⚔ Go to quiz</button>`;
 content.appendChild(cta);
+
+// ── Wrong Answers review ──────────────────────────────────────────────────
+
+const quizScores = state.quiz_scores || [];
+const seen = new Set();
+const wrongAnswers = [];
+for (const attempt of quizScores) {
+  for (const q of (attempt.questions || [])) {
+    if (!q.correct && !seen.has(q.question)) {
+      seen.add(q.question);
+      wrongAnswers.push(q);
+    }
+  }
+}
+
+if (wrongAnswers.length > 0) {
+  const review = document.createElement("div");
+  review.className = "review-section";
+  review.innerHTML = `
+    <h3>⚠ Wrong answers</h3>
+    <div class="review-sub">Questions you've missed across all attempts — including ones you later got right.</div>
+    ${wrongAnswers.map(q => `
+      <div class="wrong-item">
+        <div class="wrong-q">${q.question}</div>
+        <div class="wrong-a">${q.correct_answer}</div>
+      </div>`).join("")}`;
+  content.appendChild(review);
+}
 
 // ── TOC active tracking (IntersectionObserver) ────────────────────────────
 
