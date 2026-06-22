@@ -401,9 +401,204 @@ public class LoanService {
   xpMax: 400,
   sections: [
     {
-      id: "coming-soon",
-      title: "Coming Soon",
-      content: `<p class="coming-soon">🔒 Complete <strong>Software Architecture</strong> to unlock this lesson.</p>`
+      id: "what-is-system-design",
+      title: "What is System Design?",
+      content: `
+<p>System design is the process of defining <strong>how components work together at scale</strong> — across machines, processes, and time. Where architecture answers "how should this service be structured?", system design answers "how do ten services serve ten million users without falling over?"</p>
+
+<p>Senior engineers are expected to reason about systems they haven't built yet. Given a requirement like "design a payment processing system for 1 million daily transactions," you need a structured way to think through it.</p>
+
+<h3>The Design Process</h3>
+
+<p>Always start by asking clarifying questions before drawing boxes. A common trap: jumping to a solution before understanding the problem.</p>
+
+<ol>
+  <li><strong>Clarify requirements</strong> — What's the scale? Read-heavy or write-heavy? Strong consistency required, or eventual is fine?</li>
+  <li><strong>Estimate scale</strong> — Rough numbers. 1M daily users ≈ ~12 requests/sec average, but peak may be 10×.</li>
+  <li><strong>Define the API</strong> — What does the system expose? Input/output shapes anchor the design.</li>
+  <li><strong>Design the data model</strong> — What needs to be stored? What are the access patterns?</li>
+  <li><strong>Sketch the high-level design</strong> — Services, databases, queues. Keep it simple first.</li>
+  <li><strong>Identify bottlenecks</strong> — Where does this break at 10× load? Then add complexity only where needed.</li>
+</ol>
+
+<div class="callout">
+  <strong>Rule:</strong> Start simple. Add complexity only when you can name the specific problem it solves.
+</div>
+`
+    },
+    {
+      id: "scalability",
+      title: "Scalability: Vertical vs Horizontal",
+      content: `
+<p>When a system can't handle more load, you have two levers:</p>
+
+<ul>
+  <li><strong>Vertical scaling (scale up)</strong> — Give the existing machine more CPU, RAM, or disk. Simple, but has a hard ceiling and a single point of failure.</li>
+  <li><strong>Horizontal scaling (scale out)</strong> — Add more machines running the same service. No hard ceiling, but requires your application to be <em>stateless</em>.</li>
+</ul>
+
+<h3>Stateless vs Stateful Services</h3>
+
+<p>This is the key constraint. To scale horizontally, each instance must produce the same result for the same request regardless of which instance handles it. If a service stores session state in memory, requests must always route to the same instance — that's sticky sessions, and it's a scaling headache.</p>
+
+<p>The fix: move state out of the application and into a shared store.</p>
+
+<pre><code class="java">// ❌ Stateful — can't scale out freely
+@RestController
+public class SessionController {
+    private Map&lt;String, User&gt; sessions = new HashMap&lt;&gt;(); // in-memory
+
+    @GetMapping("/me")
+    public User getUser(HttpServletRequest req) {
+        return sessions.get(req.getSession().getId());
+    }
+}
+
+// ✅ Stateless — any instance can handle any request
+@RestController
+public class SessionController {
+    @Autowired RedisTemplate&lt;String, User&gt; redis;
+
+    @GetMapping("/me")
+    public User getUser(@RequestHeader("Authorization") String token) {
+        return redis.opsForValue().get(parseUserId(token)); // shared state in Redis
+    }
+}</code></pre>
+
+<h3>Banking Example</h3>
+
+<p>A bank's account inquiry service is read-heavy and naturally stateless — any instance can look up a balance. But a funds transfer service that checks-and-debits in two steps must handle concurrency carefully. Horizontal scaling doesn't eliminate the need for correct locking at the database level.</p>
+`
+    },
+    {
+      id: "caching",
+      title: "Caching",
+      content: `
+<p>Caching is storing the result of an expensive operation so you don't repeat it. It's one of the highest-leverage tools in system design — and one of the most dangerous if misused.</p>
+
+<h3>Where to Cache</h3>
+
+<ul>
+  <li><strong>Client-side</strong> — Browser cache, HTTP Cache-Control headers. Free performance for static assets.</li>
+  <li><strong>CDN</strong> — Cache at the network edge, close to users. Good for read-heavy public content.</li>
+  <li><strong>Application cache</strong> — In-process (e.g., Guava Cache) or distributed (e.g., Redis). Most common for database query results.</li>
+  <li><strong>Database cache</strong> — Query result cache, buffer pool. Happens automatically but you can tune it.</li>
+</ul>
+
+<h3>Cache Invalidation Strategies</h3>
+
+<p>The hard part of caching isn't storing data — it's knowing when to remove it.</p>
+
+<ul>
+  <li><strong>TTL (Time-to-Live)</strong> — Expire entries after N seconds. Simple, but you may serve stale data up to TTL.</li>
+  <li><strong>Write-through</strong> — Update the cache every time you write to the DB. Cache always fresh, but adds write latency.</li>
+  <li><strong>Cache-aside (lazy loading)</strong> — Read from cache; on miss, load from DB and populate cache. Most common pattern.</li>
+  <li><strong>Invalidate on write</strong> — Delete the cache entry when the underlying data changes. Simple but creates a thundering herd if many requests race to repopulate.</li>
+</ul>
+
+<pre><code class="java">// Cache-aside pattern (most common)
+public AccountBalance getBalance(String accountId) {
+    AccountBalance cached = redis.opsForValue().get("balance:" + accountId);
+    if (cached != null) return cached;
+
+    AccountBalance fresh = accountRepository.findById(accountId).getBalance();
+    redis.opsForValue().set("balance:" + accountId, fresh, Duration.ofSeconds(30));
+    return fresh;
+}</code></pre>
+
+<div class="callout">
+  <strong>Banking caveat:</strong> Account balances require strong consistency. Cache only for read-heavy, tolerance-for-slight-staleness scenarios (e.g., displaying a recent transaction list). Never cache a balance you're using to authorize a debit.
+</div>
+`
+    },
+    {
+      id: "load-balancing",
+      title: "Load Balancing & API Gateways",
+      content: `
+<p>Once you have multiple instances of a service, something must decide which instance handles each request. That's a <strong>load balancer</strong>.</p>
+
+<h3>Load Balancing Algorithms</h3>
+
+<ul>
+  <li><strong>Round robin</strong> — Requests distributed in order: instance 1, 2, 3, 1, 2, 3... Simple and effective when instances are equal.</li>
+  <li><strong>Least connections</strong> — Route to the instance with fewest active connections. Better when requests vary in processing time.</li>
+  <li><strong>IP hash</strong> — Same client IP always routes to the same instance. Useful for sticky sessions (but try to avoid needing this).</li>
+  <li><strong>Weighted</strong> — Send more traffic to more powerful instances.</li>
+</ul>
+
+<h3>API Gateway</h3>
+
+<p>In microservice architectures, an API gateway sits in front of all services and handles cross-cutting concerns:</p>
+
+<ul>
+  <li>Authentication / JWT validation</li>
+  <li>Rate limiting</li>
+  <li>Request routing</li>
+  <li>SSL termination</li>
+  <li>Logging and tracing</li>
+</ul>
+
+<p>This keeps each individual service from having to implement these concerns. In a bank, the gateway enforces that every request carries a valid token before it ever reaches the payment service.</p>
+
+<pre><code>
+  Client
+    │
+    ▼
+[API Gateway]  ← auth, rate-limit, routing
+    │
+    ├──► [Account Service]
+    ├──► [Payment Service]
+    └──► [Notification Service]
+</code></pre>
+
+<h3>Health Checks</h3>
+
+<p>Load balancers need to know which instances are healthy. Services expose a <code>/health</code> endpoint; the load balancer polls it and stops routing to instances that fail. In Spring Boot, Spring Actuator gives you this for free at <code>/actuator/health</code>.</p>
+`
+    },
+    {
+      id: "reliability",
+      title: "Reliability & Fault Tolerance",
+      content: `
+<p>At scale, failures are not exceptional — they are routine. A senior engineer designs systems that degrade gracefully rather than fail completely.</p>
+
+<h3>Key Reliability Concepts</h3>
+
+<p><strong>Single Point of Failure (SPOF)</strong> — Any component whose failure brings down the whole system. Eliminate them with redundancy: run multiple instances, use replicated databases, deploy across availability zones.</p>
+
+<p><strong>Failover</strong> — When the primary fails, traffic automatically switches to a standby. A primary-replica database setup allows read traffic to continue from replicas if the primary goes down.</p>
+
+<p><strong>Circuit Breaker</strong> — If a downstream service is failing, stop hammering it with requests. After N consecutive failures, "open" the circuit and return a fallback immediately. After a timeout, allow a probe request through ("half-open"). This prevents cascading failures.</p>
+
+<pre><code class="java">// Resilience4j circuit breaker (common in Spring Boot)
+@CircuitBreaker(name = "creditScoreService", fallbackMethod = "defaultScore")
+public CreditScore getCreditScore(String customerId) {
+    return creditBureauClient.check(customerId);
+}
+
+public CreditScore defaultScore(String customerId, Exception ex) {
+    // Return a conservative default instead of crashing
+    return CreditScore.conservative();
+}</code></pre>
+
+<p><strong>Retry with backoff</strong> — Transient failures (network blip, temporary overload) often resolve on retry. But don't retry immediately in a tight loop — use exponential backoff to avoid making an overloaded service worse.</p>
+
+<p><strong>Idempotency</strong> — In banking this is critical. If a "transfer $100" request times out, did it execute? The client retries — will the customer be charged twice? Design operations to be idempotent: a retry with the same idempotency key produces the same result without double-executing.</p>
+
+<pre><code class="java">// Idempotent payment endpoint
+@PostMapping("/payments")
+public PaymentResult createPayment(
+    @RequestHeader("Idempotency-Key") String key,
+    @RequestBody PaymentRequest req) {
+
+    // Return existing result if this key was already processed
+    return paymentService.processIdempotent(key, req);
+}</code></pre>
+
+<div class="callout">
+  <strong>The key mindset shift:</strong> Stop asking "what happens when everything works?" Start asking "what happens when this specific component fails?" Design the answer before it happens in production.
+</div>
+`
     }
   ]
 },
@@ -414,9 +609,231 @@ public class LoanService {
   xpMax: 350,
   sections: [
     {
-      id: "coming-soon",
-      title: "Coming Soon",
-      content: `<p class="coming-soon">🔒 Complete <strong>Software Architecture</strong> to unlock this lesson.</p>`
+      id: "what-are-patterns",
+      title: "What Are Design Patterns?",
+      content: `
+<p>Design patterns are <strong>named solutions to recurring problems</strong>. They're not libraries you import — they're vocabulary for communicating structure. When a senior engineer says "use a Strategy here," everyone on the team immediately understands the shape of the solution.</p>
+
+<p>The classic reference is the <em>Gang of Four</em> book (1994), which organized 23 patterns into three categories:</p>
+
+<ul>
+  <li><strong>Creational</strong> — how objects are created (Builder, Factory, Singleton)</li>
+  <li><strong>Structural</strong> — how objects are composed (Decorator, Facade, Adapter)</li>
+  <li><strong>Behavioral</strong> — how objects communicate (Strategy, Observer, Command)</li>
+</ul>
+
+<div class="callout">
+  <strong>The trap:</strong> Pattern overuse. Applying a pattern where a simple function would do is an antipattern in itself. Use patterns when you can name the specific problem they solve, not to appear sophisticated.
+</div>
+
+<p>In a Spring Boot codebase, you are already using patterns constantly — Spring's own framework is built on them. The goal here is to recognize them, name them, and know when to reach for them yourself.</p>
+`
+    },
+    {
+      id: "strategy-pattern",
+      title: "Strategy Pattern",
+      content: `
+<p>The Strategy pattern defines a <strong>family of interchangeable algorithms</strong> and lets you swap them at runtime without changing the code that uses them. It's one of the most useful patterns in business applications.</p>
+
+<h3>The Problem</h3>
+
+<p>A bank charges different fees depending on account type: premium accounts pay 0.1%, standard accounts pay 0.5%, student accounts pay nothing. Without Strategy:</p>
+
+<pre><code class="java">// ❌ Every new account type requires modifying this method
+public BigDecimal calculateFee(Transaction tx, String accountType) {
+    if (accountType.equals("PREMIUM")) return tx.amount().multiply(new BigDecimal("0.001"));
+    if (accountType.equals("STANDARD")) return tx.amount().multiply(new BigDecimal("0.005"));
+    if (accountType.equals("STUDENT")) return BigDecimal.ZERO;
+    throw new IllegalArgumentException("Unknown type");
+}</code></pre>
+
+<h3>With Strategy</h3>
+
+<pre><code class="java">// ✅ Adding a new account type = new class, zero changes to existing code
+public interface FeeStrategy {
+    BigDecimal calculate(Transaction tx);
+}
+
+@Component("PREMIUM")
+public class PremiumFeeStrategy implements FeeStrategy {
+    public BigDecimal calculate(Transaction tx) {
+        return tx.amount().multiply(new BigDecimal("0.001"));
+    }
+}
+
+@Component("STUDENT")
+public class StudentFeeStrategy implements FeeStrategy {
+    public BigDecimal calculate(Transaction tx) { return BigDecimal.ZERO; }
+}
+
+@Service
+public class FeeService {
+    @Autowired Map&lt;String, FeeStrategy&gt; strategies; // Spring injects all implementations
+
+    public BigDecimal calculateFee(Transaction tx, String accountType) {
+        return strategies.get(accountType).calculate(tx);
+    }
+}</code></pre>
+
+<p>Spring's ability to inject all implementations of an interface into a Map makes Strategy particularly clean in Java. Adding a new account type is a new class — nothing else changes.</p>
+
+<p>This is also a direct application of the <strong>Open/Closed Principle</strong>: open for extension, closed for modification.</p>
+`
+    },
+    {
+      id: "builder-pattern",
+      title: "Builder Pattern",
+      content: `
+<p>The Builder pattern constructs <strong>complex objects step by step</strong>, separating construction from representation. You use it constantly in Java, often without realizing it.</p>
+
+<h3>The Problem It Solves</h3>
+
+<p>A <code>TransferRequest</code> object has 8 fields. Some are optional. A constructor with 8 parameters is unreadable and error-prone — did you put amount before currency or after?</p>
+
+<pre><code class="java">// ❌ Telescoping constructor — which arg is which?
+new TransferRequest("ACC001", "ACC002", new BigDecimal("1000"), "GBP", true, null, "REF-123", Instant.now());</code></pre>
+
+<h3>With Builder</h3>
+
+<pre><code class="java">// ✅ Readable, self-documenting, optional fields handled cleanly
+TransferRequest request = TransferRequest.builder()
+    .fromAccount("ACC001")
+    .toAccount("ACC002")
+    .amount(new BigDecimal("1000"))
+    .currency("GBP")
+    .urgent(true)
+    .reference("REF-123")
+    .build();
+</code></pre>
+
+<p>In modern Java projects, <strong>Lombok's <code>@Builder</code></strong> generates this for you:</p>
+
+<pre><code class="java">@Builder
+@Value // immutable
+public class TransferRequest {
+    String fromAccount;
+    String toAccount;
+    BigDecimal amount;
+    String currency;
+    boolean urgent;
+    String note;      // optional — defaults to null
+    String reference;
+    Instant requestedAt;
+}</code></pre>
+
+<h3>You Use It Everywhere Already</h3>
+
+<ul>
+  <li><code>HttpRequest.newBuilder()...build()</code></li>
+  <li><code>ResponseEntity.ok().header(...).body(...)</code></li>
+  <li>Spring Security's <code>http.authorizeRequests()...build()</code></li>
+  <li>JPA's <code>CriteriaBuilder</code></li>
+</ul>
+
+<p>Recognize the pattern in unfamiliar APIs — chained method calls returning <code>this</code>, terminated by <code>build()</code> — and you'll read new libraries faster.</p>
+`
+    },
+    {
+      id: "decorator-pattern",
+      title: "Decorator Pattern",
+      content: `
+<p>The Decorator pattern <strong>wraps an object to add behaviour without changing the original class</strong>. It's the structural backbone of AOP (Aspect-Oriented Programming), which Spring uses extensively.</p>
+
+<h3>Manual Decorator</h3>
+
+<p>You have a <code>PaymentService</code>. You want to add logging and timing without touching the service itself:</p>
+
+<pre><code class="java">public interface PaymentService {
+    PaymentResult process(PaymentRequest req);
+}
+
+@Primary
+@Service
+public class LoggingPaymentService implements PaymentService {
+    private final PaymentService delegate; // wraps the real service
+    private final Logger log = LoggerFactory.getLogger(getClass());
+
+    public LoggingPaymentService(@Qualifier("realPaymentService") PaymentService delegate) {
+        this.delegate = delegate;
+    }
+
+    public PaymentResult process(PaymentRequest req) {
+        log.info("Processing payment {}", req.reference());
+        long start = System.currentTimeMillis();
+        PaymentResult result = delegate.process(req); // delegate to original
+        log.info("Completed in {}ms", System.currentTimeMillis() - start);
+        return result;
+    }
+}</code></pre>
+
+<h3>Spring AOP = Decorator Under the Hood</h3>
+
+<p>When you write <code>@Transactional</code> or <code>@Cacheable</code>, Spring wraps your bean in a proxy that adds that behaviour. You never see the wrapper, but it's a decorator.</p>
+
+<pre><code class="java">@Service
+public class AccountService {
+
+    @Transactional          // Spring wraps this method in a transaction decorator
+    @Cacheable("accounts")  // and a caching decorator
+    public Account findById(String id) {
+        return accountRepository.findById(id).orElseThrow();
+    }
+}</code></pre>
+
+<div class="callout">
+  <strong>Key insight:</strong> Every time you add a Spring annotation that changes behaviour without modifying logic (<code>@Transactional</code>, <code>@Cacheable</code>, <code>@Secured</code>, <code>@Retryable</code>), you are using the Decorator pattern via AOP. Understanding this makes Spring's proxy model far less mysterious.
+</div>
+`
+    },
+    {
+      id: "facade-pattern",
+      title: "Facade Pattern",
+      content: `
+<p>The Facade pattern provides a <strong>simplified interface to a complex subsystem</strong>. Rather than callers knowing about 5 internal services, they interact with one surface that orchestrates them.</p>
+
+<h3>Banking Example</h3>
+
+<p>Opening a new bank account involves: KYC verification, credit check, account creation, welcome notification, and audit logging. Without a facade, the controller knows about all of it:</p>
+
+<pre><code class="java">// ❌ Controller doing too much orchestration
+@PostMapping("/accounts")
+public Account openAccount(@RequestBody NewAccountRequest req) {
+    kycService.verify(req.customerId());
+    CreditScore score = creditService.check(req.customerId());
+    Account account = accountRepository.create(req, score);
+    notificationService.sendWelcome(account);
+    auditService.log("ACCOUNT_OPENED", account);
+    return account;
+}</code></pre>
+
+<pre><code class="java">// ✅ Facade hides the complexity
+@PostMapping("/accounts")
+public Account openAccount(@RequestBody NewAccountRequest req) {
+    return accountOpeningFacade.open(req); // single call
+}
+
+@Service
+public class AccountOpeningFacade {
+    public Account open(NewAccountRequest req) {
+        kycService.verify(req.customerId());
+        CreditScore score = creditService.check(req.customerId());
+        Account account = accountRepository.create(req, score);
+        notificationService.sendWelcome(account);
+        auditService.log("ACCOUNT_OPENED", account);
+        return account;
+    }
+}</code></pre>
+
+<p>The controller is now trivially testable. The orchestration logic lives in one place. If the account-opening process changes, you update the facade — not every controller that participates in it.</p>
+
+<h3>Facade vs Service Layer</h3>
+
+<p>In Spring Boot, your <code>@Service</code> classes often <em>are</em> facades — they hide repository and domain complexity from controllers. The distinction matters when a service grows too large: split the internal complexity into focused sub-services, then keep the facade as the public entry point.</p>
+
+<div class="callout">
+  <strong>Recognizing the pattern in code reviews:</strong> If a controller method is longer than ~10 lines and calls more than 2–3 services, it's probably missing a facade. Extract the orchestration.
+</div>
+`
     }
   ]
 }
