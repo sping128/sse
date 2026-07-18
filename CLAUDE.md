@@ -1,4 +1,4 @@
-# Senior Engineer Quest
+# Software Engineer Quest
 
 A self-study web app for levelling up to senior software engineer.
 

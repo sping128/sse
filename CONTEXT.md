@@ -1,4 +1,4 @@
-# Senior Engineer Quest
+# Software Engineer Quest
 
 A gamified self-study app for levelling up to senior software engineer. Solo player, no backend — all state lives in the browser via `progress.js`.
 

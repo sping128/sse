@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Senior Engineer Quest</title>
+<title>Software Engineer Quest</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -332,7 +332,7 @@ header {
 <body>
 
 <header>
-  <div class="logo">⚔ Senior Engineer Quest</div>
+  <div class="logo">⚔ Software Engineer Quest</div>
   <div class="divider"></div>
   <div class="player-name" id="playerName">Learner</div>
   <div class="tier-badge tier-junior" id="tierBadge">🥉 Junior</div>
@@ -376,11 +376,14 @@ const TOPICS = [
     col: 2, row: 0,
     xpMax: 300,
     subs: [
-      "Architectural styles (Monolith, Microservices, SOA, Event-driven, Serverless)",
-      "Quality attributes: scalability, reliability, availability, maintainability",
-      "Design principles: SOLID, DRY, KISS, YAGNI, SoC",
-      "Architectural patterns: Layered, Hexagonal, CQRS, Event Sourcing",
-      "Trade-off analysis & Architecture Decision Records (ADRs)"
+      "What is Architecture?",
+      "The Core Rule: Cohesion & Coupling",
+      "Architectural Styles at a Bank (Monolith, SOA, Microservices, Event-Driven)",
+      "The Layered Architecture",
+      "Quality Attributes (reliability, security, availability, scalability)",
+      "The Trade-Off Mindset (ADRs, cargo culting)",
+      "SOLID Principles",
+      "DRY, KISS & YAGNI"
     ]
   },
   {
@@ -408,11 +411,13 @@ const TOPICS = [
     col: 3, row: 1,
     xpMax: 350,
     subs: [
-      "Creational: Factory, Abstract Factory, Builder, Singleton",
-      "Structural: Adapter, Decorator, Proxy, Composite, Facade",
-      "Behavioral: Observer, Strategy, Command, Chain of Responsibility",
+      "What Are Design Patterns? (Creational, Structural, Behavioral)",
+      "Strategy Pattern",
+      "Builder Pattern",
       "Anti-patterns: God object, Anemic domain model, Spaghetti code",
-      "When NOT to use patterns (YAGNI in practice)"
+      "When NOT to use patterns (YAGNI in practice)",
+      "Decorator Pattern",
+      "Facade Pattern"
     ]
   },
   {
@@ -424,11 +429,12 @@ const TOPICS = [
     col: 0, row: 2,
     xpMax: 500,
     subs: [
-      "CAP theorem and practical implications",
-      "Consistency models: strong, eventual, causal, linearizability",
-      "Distributed consensus: Raft and Paxos explained",
-      "Failure modes: network partitions, split-brain, Byzantine faults",
-      "Saga pattern vs two-phase commit"
+      "What Are Distributed Systems? (fallacies of distributed computing)",
+      "The CAP Theorem",
+      "Consistency Models (strong, eventual, read-your-writes)",
+      "Consensus & Coordination (distributed locks, leader election)",
+      "Distributed Transactions & the Saga Pattern (vs two-phase commit)",
+      "Messaging & Delivery Guarantees (idempotent consumers)"
     ]
   },
   {
@@ -440,11 +446,12 @@ const TOPICS = [
     col: 2, row: 2,
     xpMax: 400,
     subs: [
-      "Relational vs document vs wide-column vs graph trade-offs",
-      "Indexing strategies: B-tree, LSM tree, covering indexes",
-      "ACID vs BASE — what they actually guarantee",
-      "Sharding strategies and replication topologies",
-      "Data modeling for read vs write heavy workloads"
+      "Choosing a Database (relational, document, key-value, columnar, search)",
+      "Data Modeling & Normalization",
+      "Indexing",
+      "Transactions & ACID (isolation levels)",
+      "Replication & Sharding",
+      "ORM Pitfalls: The N+1 Query"
     ]
   },
   {
@@ -456,11 +463,13 @@ const TOPICS = [
     col: 4, row: 2,
     xpMax: 300,
     subs: [
-      "REST constraints and best practices",
-      "GraphQL: strengths, N+1 problem, DataLoader",
-      "gRPC and Protocol Buffers vs JSON",
-      "API versioning strategies (URL, header, content negotiation)",
-      "WebSockets, SSE, and long polling trade-offs"
+      "REST Fundamentals",
+      "API Versioning",
+      "Idempotency & Safe Methods",
+      "Pagination, Filtering & Rate Limiting",
+      "API Contracts (OpenAPI, contract-first development)",
+      "Sync vs Async APIs (webhooks, message queues, gRPC)",
+      "Error Handling & Status Codes"
     ]
   },
   {
@@ -472,11 +481,12 @@ const TOPICS = [
     col: 1, row: 3,
     xpMax: 400,
     subs: [
-      "The three pillars: structured logs, metrics, distributed traces",
-      "SLI / SLO / SLA definitions and error budgets",
-      "Alerting strategy: symptom-based vs cause-based",
-      "On-call rotations and incident management",
-      "Chaos engineering and resilience testing"
+      "The Three Pillars: Logs, Metrics, Traces",
+      "Structured Logging (correlation IDs)",
+      "Metrics & Monitoring (RED method, SLI/SLO/SLA)",
+      "Distributed Tracing",
+      "Alerting (symptom-based, actionable)",
+      "Incident Response & Postmortems"
     ]
   },
   {
@@ -488,11 +498,12 @@ const TOPICS = [
     col: 3, row: 3,
     xpMax: 350,
     subs: [
-      "AuthN vs AuthZ: OAuth2, JWT, OIDC, SAML",
-      "OWASP Top 10 and how to mitigate each",
-      "Encryption at rest vs in transit; key management",
-      "Secret management (Vault, AWS Secrets Manager)",
-      "Threat modeling with STRIDE"
+      "Authentication vs Authorization (OAuth2, JWT, OIDC)",
+      "Common Vulnerabilities (OWASP Top 10)",
+      "Secrets Management",
+      "Encryption (at rest, in transit, PCI-DSS)",
+      "Secure Coding in Spring Boot",
+      "Compliance & Threat Modeling (STRIDE)"
     ]
   },
   {
@@ -504,11 +515,12 @@ const TOPICS = [
     col: 2, row: 4,
     xpMax: 400,
     subs: [
-      "Technical strategy: roadmaps, build vs buy, tech debt",
-      "Effective code review (what to look for, what not to nitpick)",
-      "Mentoring: feedback models, growth plans",
-      "Estimation and scope negotiation",
-      "Cross-team influence without authority"
+      "From Individual Contributor to Senior",
+      "Code Review as Mentorship",
+      "Technical Decision Making (ADRs, disagree and commit)",
+      "Mentoring Junior Engineers",
+      "Communicating with Non-Engineers",
+      "Leading Incidents"
     ]
   }
 ];
